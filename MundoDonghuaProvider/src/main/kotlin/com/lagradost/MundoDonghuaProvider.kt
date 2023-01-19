@@ -24,10 +24,10 @@ class MundoDonghuaProvider : MainAPI() {
     )
 
     abstract class SpecialEpisodes {
-        abstract var docFinal
+        abstract var docFinal = AbstractMap()
     } 
 
-    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse: SpecialEpisodes {
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse, SpecialEpisodes {
         val urls = listOf(
             Pair("$mainUrl/lista-donghuas", "Donghuas"),
         )
@@ -95,7 +95,7 @@ class MundoDonghuaProvider : MainAPI() {
         }
     }
 
-    override suspend fun load(url: String): LoadResponse: SpecialEpisodes {
+    override suspend fun load(url: String): LoadResponse, SpecialEpisodes {
         val doc = app.get(url, timeout = 120).document
         val poster = doc.selectFirst("head meta[property=og:image]")?.attr("content") ?: ""
         val title = doc.selectFirst(".ls-title-serie")?.text() ?: ""

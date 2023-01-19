@@ -22,7 +22,7 @@ class MundoDonghuaProvider : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Anime,
     )
-    private var docSpecial = app.get(mainUrl, timeout = 120).document.map
+    private val docSpecial
 
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val urls = listOf(
@@ -41,6 +41,7 @@ class MundoDonghuaProvider : MainAPI() {
                     val epNumRemoveRegex = Regex("/" + epNum.toString() + "/.*")
                     val url = it.selectFirst("a")?.attr("href")?.replace(epRegex,"")?.replace("/ver/","/donghua/")?.replace(epNumRemoveRegex,"")
                     val dubstat = if (title.contains("Latino") || title.contains("Castellano")) DubStatus.Dubbed else DubStatus.Subbed
+                    val docSpecial = app.get(mainUrl, timeout = 120).document
                     newAnimeSearchResponse(title.replace(Regex("Episodio|(\\d+)"),"").trim(), fixUrl(url ?: "")) {
                         this.posterUrl = fixUrl(poster ?: "")
                         addDubStatus(dubstat, epNum)

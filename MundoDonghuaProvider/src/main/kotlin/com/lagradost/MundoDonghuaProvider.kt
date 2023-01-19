@@ -22,9 +22,12 @@ class MundoDonghuaProvider : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Anime,
     )
-    abstract var docFinal: Map
 
-    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
+    abstract class SpecialEpisodes {
+        abstract var docFinal: Map
+    } 
+
+    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse: SpecialEpisodes {
         val urls = listOf(
             Pair("$mainUrl/lista-donghuas", "Donghuas"),
         )
@@ -41,7 +44,7 @@ class MundoDonghuaProvider : MainAPI() {
                     val epNumRemoveRegex = Regex("/" + epNum.toString() + "/.*")
                     val url = it.selectFirst("a")?.attr("href")?.replace(epRegex,"")?.replace("/ver/","/donghua/")?.replace(epNumRemoveRegex,"")
                     val dubstat = if (title.contains("Latino") || title.contains("Castellano")) DubStatus.Dubbed else DubStatus.Subbed
-                    docFinal = app.get(mainUrl, timeout = 120).document
+                    override var docFinal = app.get(mainUrl, timeout = 120).document
                     newAnimeSearchResponse(title.replace(Regex("Episodio|(\\d+)"),"").trim(), fixUrl(url ?: "")) {
                         this.posterUrl = fixUrl(poster ?: "")
                         addDubStatus(dubstat, epNum)
@@ -92,7 +95,7 @@ class MundoDonghuaProvider : MainAPI() {
         }
     }
 
-    override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse: SpecialEpisodes {
         val doc = app.get(url, timeout = 120).document
         val poster = doc.selectFirst("head meta[property=og:image]")?.attr("content") ?: ""
         val title = doc.selectFirst(".ls-title-serie")?.text() ?: ""

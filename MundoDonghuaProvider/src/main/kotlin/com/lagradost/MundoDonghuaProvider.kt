@@ -22,12 +22,21 @@ class MundoDonghuaProvider : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Anime,
     )
+    val docSpecial = app.get(mainUrl, timeout = 120).document
+    val specialEpisodes = docSpecial.select("div.sm-row.bg-white.pt-10.pr-20.pb-15.pl-20 div.item.col-lg-2.col-md-2.col-xs-4").mapNotNull {
+        val name = it.selectFirst("h5")?.text()?.replace("Episodio","-") ?: ""
+        val link = it.selectFirst("a")?.attr("href") ?: ""
+        if (name.contains(title, true)) {
+            Episode(fixUrl(link), name)
+        } else {
+            null
+        }
+    }.reversed()
 
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val urls = listOf(
             Pair("$mainUrl/lista-donghuas", "Donghuas"),
         )
-
         val items = ArrayList<HomePageList>()
         items.add(
             HomePageList(
@@ -102,30 +111,17 @@ class MundoDonghuaProvider : MainAPI() {
             "Finalizada" -> ShowStatus.Completed
             else -> null
         }
-        var counter = 0
-        var condition = ""
-        val specialEpisodes = app.get(mainUrl, timeout = 120).document.select(".col-xs-4").map {
-            counter = counter + 1
-            if (counter < 7){
-                condition = it.selectFirst("h5")?.text()?.lowercase()?.contains(title.lowercase())
-                if (condition != null && condition == true) {
-                    val name = it.selectFirst("h5")?.text()?.replace("Episodio","-") ?: ""
-                    val link = it.selectFirst("a")?.attr("href") ?: ""
-                    Episode(fixUrl(link), name)
-                }
-            }
-        }
         val episodes = doc.select("ul.donghua-list a").map {
             val name = it.selectFirst(".fs-16")?.text()
             val link = it.attr("href")
             Episode(fixUrl(link), name)
         }.reversed()
-        val episodesFinal = specialEpisodes + episodes
+        val episodesFinal = episodes + specialEpisodes
         val typeinfo = doc.select("div.row div.col-md-6.pl-15 p.fc-dark").text()
         val tvType = if (typeinfo.contains(Regex("Tipo.*Pel.cula"))) TvType.AnimeMovie else TvType.Anime
         return newAnimeLoadResponse(title, url, tvType) {
             posterUrl = poster
-            addEpisodes(DubStatus.Subbed, episodesFinal.filterNotNull().filterIsInstance<Episode>())
+            addEpisodes(DubStatus.Subbed, episodesFinal)
             showStatus = status
             plot = description
             tags = genres

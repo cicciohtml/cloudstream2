@@ -22,7 +22,7 @@ class MundoDonghuaProvider : MainAPI() {
     override val supportedTypes = setOf(
         TvType.Anime,
     )
-    private val docSpecial
+    private abstract val docSpecial
 
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
         val urls = listOf(

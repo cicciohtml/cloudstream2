@@ -24,7 +24,7 @@ class MundoDonghuaProvider : MainAPI() {
     )
 
     abstract class SpecialEpisodes {
-        abstract var docFinal: Map
+        abstract var docFinal
     } 
 
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse: SpecialEpisodes {

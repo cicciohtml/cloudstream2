@@ -63,14 +63,14 @@ class CalcioStreamingProvider : MainAPI() {
     private fun matchFound(document: Document) : Boolean {
         return Regex(""""((.|\n)*?).";""").containsMatchIn(
             getAndUnpack(
-                document.select("script")[6].childNode(0).toString()
+                document.toString()
             ))
     }
 
     private fun getUrl(document: Document):String{
         return Regex(""""((.|\n)*?).";""").find(
             getAndUnpack(
-                document.select("script")[6].childNode(0).toString()
+                document.toString()
             ))!!.value.replace("""src="""", "").replace(""""""", "").replace(";", "")
     }
 

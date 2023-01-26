@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.nicehttp.RequestBodyTypes
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -25,6 +26,7 @@ class SkillShareProvider : MainAPI() { // all providers must be an instance of M
     override val hasChromecastSupport = true
     override var lang = "en"
     override val hasMainPage = true
+    private val interceptor = CloudflareKiller()
     private var cursor = mutableMapOf("SIX_MONTHS_ENGAGEMENT" to "", "ML_TRENDINESS" to "")
 
     override val mainPage =
@@ -35,7 +37,7 @@ class SkillShareProvider : MainAPI() { // all providers must be an instance of M
 
     private suspend fun queryMovieApi(payload: String): String {
         val req = payload.toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull())
-        return app.post(apiUrl, requestBody = req, referer = "$mainUrl/", timeout = 30).text
+        return app.post(apiUrl, requestBody = req, referer = "$mainUrl/", interceptor = interceptor, timeout = 30).text
     }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -144,8 +146,8 @@ class SkillShareProvider : MainAPI() { // all providers must be an instance of M
 
     override suspend fun load(url: String): LoadResponse? {
         val data = parseJson<Data>(url)
-        val document = app.get(bypassApiUrl + "/${data.courseId}")
-            .parsedSafe<BypassApiData>() ?: app.get(bypassApiUrlFallback + "/${data.courseId}/0")
+        val document = app.get("$bypassApiUrl/${data.courseId}", interceptor = interceptor)
+            .parsedSafe<BypassApiData>() ?: app.get("$bypassApiUrlFallback/${data.courseId}/0", interceptor = interceptor)
             .parsedSafe<BypassApiData>() ?: throw ErrorLoadingException("Invalid Json Response")
         val title = data.title ?: ""
         val poster = data.largeCoverUrl

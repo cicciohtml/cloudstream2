@@ -36,7 +36,7 @@ class StarLiveProvider : MainAPI() {
             .map { LinkParser(
                 fixUrl(it.selectFirst("a")?.attr("href")?:""),
                 it.attr("class"),
-                it.selectFirst("span")?.text()?:""
+                it.selectFirst("b")?.text()?:""
             ) }
         val dayMatch = this.previousElementSiblings().toList().firstOrNull() { it.`is`("h3") }?.text()
 

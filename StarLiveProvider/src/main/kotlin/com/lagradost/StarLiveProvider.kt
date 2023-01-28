@@ -107,7 +107,7 @@ class StarLiveProvider : MainAPI() {
             ExtractorLink(
                 source = this.name,
                 name = data.name + " - " + data.language,
-                url = streamUrl,
+                url = fixUrl(streamUrl),
                 quality = Qualities.Unknown.value,
                 referer = referrerLink,
                 isM3u8 = true

@@ -123,7 +123,7 @@ class StarLiveProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        tryParseJson<MatchParser>(data)?.linkData?.map { link ->
+        tryParseJson<MatchParser>(data)?.linkData?.apmap { link ->
             extractVideoLinks(link, callback)
         }
 

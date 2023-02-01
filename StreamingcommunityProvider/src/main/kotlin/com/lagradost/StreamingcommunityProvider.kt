@@ -1,4 +1,4 @@
-package com.lagradost
+package com.lagradost.cloudstream3
 
 import android.text.Html
 import com.fasterxml.jackson.annotation.*
@@ -11,7 +11,7 @@ import java.security.MessageDigest
 
 class StreamingcommunityProvider: MainAPI() {
     override var lang = "it"
-    override var mainUrl = "https://streamingcommunity.online"
+    override var mainUrl = "https://streamingcommunity.cafe"
     override var name = "StreamingCommunity"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -21,41 +21,10 @@ class StreamingcommunityProvider: MainAPI() {
     )
     private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
 
-    private fun translateNumber(num: Int): Int? {
-        return when (num) {
-            67 -> 1
-            71 -> 2
-            72 -> 3
-            73 -> 4
-            74 -> 5
-            75 -> 6
-            76 -> 7
-            77 -> 8
-            78 -> 9
-            79 -> 10
-            133 -> 11
-            else -> null
-        }
-    }
-
-    private fun translateIp(num: Int): String? {
-        return when (num) {
-            16 -> "sc-b1-01.scws-content.net"
-            17 -> "sc-b1-02.scws-content.net"
-            18 -> "sc-b1-03.scws-content.net"
-            85 -> "sc-b1-04.scws-content.net"
-            95 -> "sc-b1-05.scws-content.net"
-            117 -> "sc-b1-06.scws-content.net"
-            141 -> "sc-b1-07.scws-content.net"
-            142 -> "sc-b1-08.scws-content.net"
-            143 -> "sc-b1-09.scws-content.net"
-            144 -> "sc-b1-10.scws-content.net"
-            else -> null
-        }
-    }
-
     override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
-        val document = app.get(mainUrl, headers = mapOf("user-agent" to userAgent)).document
+        val webpage = app.get(mainUrl, headers = mapOf("user-agent" to userAgent))
+        val document = webpage.document
+        mainUrl = webpage.url
         val items = document.select("slider-title").subList(0, 3).map {
             val films = it.attr("titles-json")
             val videoData = parseJson<List<VideoElement>>(films)
@@ -68,31 +37,8 @@ class StreamingcommunityProvider: MainAPI() {
         return HomePageResponse(items)
     }
 
-    private suspend fun VideoElement.toSearchResponse() : MovieSearchResponse{
-            val id = this.id
-            val name = this.slug
-            val img = this.images[0].url
-            val number = translateNumber(this.images[0].serverID.toInt())
-            val ip = translateIp(this.images[0].proxyID.toInt())
-            val posterUrl = "https://$ip/images/$number/$img"
-            val videoUrl = "$mainUrl/titles/$id-$name"
-            //posterMap[videourl] = posterurl
-            val data = app.post("$mainUrl/api/titles/preview/$id", referer = mainUrl, headers = mapOf("user-agent" to userAgent)).text
-            val datajs = parseJson<Moviedata>(data)
-            val type: TvType = if (datajs.type == "movie") {
-                TvType.Movie
-            } else {
-                TvType.TvSeries
-            }
-
-            return newMovieSearchResponse(datajs.name, videoUrl, type) {
-                this.posterUrl = posterUrl
-                this.year =
-                    datajs.releaseDate.substringBefore("-").filter { it.isDigit() }.toIntOrNull()
-            }
-    }
-
     override suspend fun search(query: String): List<SearchResponse> {
+        mainUrl = app.get(mainUrl, headers = mapOf("user-agent" to userAgent)).url
         val queryFormatted = query.replace(" ", "%20")
         val url = "$mainUrl/search?q=$queryFormatted"
         val document = app.get(url, headers = mapOf("user-agent" to userAgent)).document
@@ -207,7 +153,6 @@ class StreamingcommunityProvider: MainAPI() {
         }
     }
 
-
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -239,6 +184,63 @@ class StreamingcommunityProvider: MainAPI() {
             )
         )
         return true
+    }
+
+    private suspend fun VideoElement.toSearchResponse() : MovieSearchResponse{
+        val id = this.id
+        val name = this.slug
+        val img = this.images[0].url
+        val number = translateNumber(this.images[0].serverID.toInt())
+        val ip = translateIp(this.images[0].proxyID.toInt())
+        val posterUrl = "https://$ip/images/$number/$img"
+        val videoUrl = "$mainUrl/titles/$id-$name"
+        //posterMap[videourl] = posterurl
+        val data = app.post("$mainUrl/api/titles/preview/$id", referer = mainUrl, headers = mapOf("user-agent" to userAgent)).text
+        val datajs = parseJson<Moviedata>(data)
+        val type: TvType = if (datajs.type == "movie") {
+            TvType.Movie
+        } else {
+            TvType.TvSeries
+        }
+
+        return newMovieSearchResponse(datajs.name, videoUrl, type) {
+            this.posterUrl = posterUrl
+            this.year =
+                datajs.releaseDate.substringBefore("-").filter { it.isDigit() }.toIntOrNull()
+        }
+    }
+
+    private fun translateNumber(num: Int): Int? {
+        return when (num) {
+            67 -> 1
+            71 -> 2
+            72 -> 3
+            73 -> 4
+            74 -> 5
+            75 -> 6
+            76 -> 7
+            77 -> 8
+            78 -> 9
+            79 -> 10
+            133 -> 11
+            else -> null
+        }
+    }
+
+    private fun translateIp(num: Int): String? {
+        return when (num) {
+            16 -> "sc-b1-01.scws-content.net"
+            17 -> "sc-b1-02.scws-content.net"
+            18 -> "sc-b1-03.scws-content.net"
+            85 -> "sc-b1-04.scws-content.net"
+            95 -> "sc-b1-05.scws-content.net"
+            117 -> "sc-b1-06.scws-content.net"
+            141 -> "sc-b1-07.scws-content.net"
+            142 -> "sc-b1-08.scws-content.net"
+            143 -> "sc-b1-09.scws-content.net"
+            144 -> "sc-b1-10.scws-content.net"
+            else -> null
+        }
     }
 }
 

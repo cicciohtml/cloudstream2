@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.*
 import org.json.JSONObject
 import java.security.MessageDigest
 
-class StreamingcommunityProvider: MainAPI() {
+class StreamingcommunityProvider : MainAPI() {
     override var lang = "it"
     override var mainUrl = "https://streamingcommunity.cafe"
     override var name = "StreamingCommunity"
@@ -19,9 +19,10 @@ class StreamingcommunityProvider: MainAPI() {
         TvType.Movie,
         TvType.TvSeries,
     )
-    private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+    private val userAgent =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
 
-    override suspend fun getMainPage(page: Int, request : MainPageRequest): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val webpage = app.get(mainUrl, headers = mapOf("user-agent" to userAgent))
         val document = webpage.document
         mainUrl = webpage.url
@@ -31,7 +32,7 @@ class StreamingcommunityProvider: MainAPI() {
             val searchResponses = videoData.subList(0, 12).apmap { searchr ->
                 searchr.toSearchResponse()
             }
-            HomePageList(it.attr("slider-name"),searchResponses)
+            HomePageList(it.attr("slider-name"), searchResponses)
         }
         if (items.isEmpty()) throw ErrorLoadingException()
         return HomePageResponse(items)
@@ -44,79 +45,73 @@ class StreamingcommunityProvider: MainAPI() {
         val document = app.get(url, headers = mapOf("user-agent" to userAgent)).document
 
         val films =
-            document.selectFirst("the-search-page")!!.attr("records-json").replace("&quot;", """"""")
+            document.selectFirst("the-search-page")!!.attr("records-json")
+                .replace("&quot;", """"""")
 
         val searchResults = parseJson<List<VideoElement>>(films)
         return searchResults.apmap { result ->
             result.toSearchResponse()
         }
-
     }
 
     override suspend fun load(url: String): LoadResponse {
-
-        val document = app.get(url,headers = mapOf("user-agent" to userAgent)).document
-        val poster = Regex("url\\('(.*)'").find(document.selectFirst("div.title-wrap")?.attributes()
-            ?.get("style") ?: "")?.groupValues?.last() //posterMap[url]
+        val document = app.get(url, headers = mapOf("user-agent" to userAgent)).document
+        val poster = Regex("url\\('(.*)'").find(
+            document.selectFirst("div.title-wrap")?.attributes()
+                ?.get("style") ?: ""
+        )?.groupValues?.lastOrNull() //posterMap[url]
         val id = url.substringBefore("-").filter { it.isDigit() }
-        val data = app.post("$mainUrl/api/titles/preview/$id", referer = mainUrl, headers = mapOf("user-agent" to userAgent)).text
+        val datajs = app.post(
+            "$mainUrl/api/titles/preview/$id",
+            referer = mainUrl,
+            headers = mapOf("user-agent" to userAgent)
+        ).parsed<Moviedata>()
 
-        val datajs = parseJson<Moviedata>(data)
-        val type: TvType = if (datajs.type == "movie") {
+        val type = if (datajs.type == "movie") {
             TvType.Movie
         } else {
             TvType.TvSeries
         }
+
         val trailerInfoJs = document.select("slider-trailer").attr("videos")
         val trailerInfo = parseJson<List<TrailerElement>>(trailerInfoJs)
-        val trailerUrl: String? = if (trailerInfo.isNotEmpty()) {
-            "https://www.youtube.com/watch?v=${trailerInfo[0].url}"
-        } else {
-            null
+        val trailerUrl = trailerInfo.firstOrNull()?.url?.let { code ->
+            "https://www.youtube.com/watch?v=$code"
         }
 
         val year = datajs.releaseDate.substringBefore("-")
         val correlates = document.selectFirst("slider-title")!!.attr("titles-json")
         val correlatesData = parseJson<List<VideoElement>>(correlates)
-        val number : Int = if (correlatesData.size<=15) {correlatesData.size} else correlatesData.size-15
+        // Max size 15 to prevent network spam
+        val size = minOf(correlatesData.size, 15)
 
-        val correlatesList =correlatesData.take(number).apmap {
+        val correlatesList = correlatesData.take(size).apmap {
             it.toSearchResponse()
         }
 
         if (type == TvType.TvSeries) {
-
             val name = datajs.name
-            val episodeList = arrayListOf<Episode>()
 
             val episodes =
                 Html.fromHtml(document.selectFirst("season-select")!!.attr("seasons")).toString()
             val jsonEpisodes = parseJson<List<Season>>(episodes)
 
-            jsonEpisodes.map { seasons ->
+            val episodeList = jsonEpisodes.map { seasons ->
                 val season = seasons.number.toInt()
                 val sid = seasons.title_id
-                val episode = seasons.episodes
-                episode.map { ep ->
+                seasons.episodes.map { ep ->
                     val href = "$mainUrl/watch/$sid?e=${ep.id}"
-                    val postImage = if (ep.images.isNotEmpty()) {
-                        ep.images.first().originalURL
-                    } else {
-                        ""
+                    val postImage = ep.images.firstOrNull()?.originalURL
+
+                    newEpisode(href) {
+                        this.name = ep.name
+                        this.season = season
+                        this.episode = ep.number.toInt()
+                        this.description = ep.plot
+                        this.posterUrl = postImage
                     }
-                    episodeList.add(
-
-                        newEpisode(href) {
-                            this.name = ep.name
-                            this.season = season
-                            this.episode = ep.number.toInt()
-                            this.description = ep.plot
-                            this.posterUrl = postImage
-                        }
-                    )
                 }
-            }
-
+            }.flatten()
 
             if (episodeList.isEmpty()) throw ErrorLoadingException("No Seasons Found")
 
@@ -130,10 +125,7 @@ class StreamingcommunityProvider: MainAPI() {
                 addTrailer(trailerUrl)
                 this.recommendations = correlatesList
             }
-
-
         } else {
-
             return newMovieLoadResponse(
                 document.selectFirst("div > div > h1")!!.text(),
                 document.select("a.play-hitzone").attr("href"),
@@ -149,7 +141,6 @@ class StreamingcommunityProvider: MainAPI() {
                 addTrailer(trailerUrl)
                 this.recommendations = correlatesList
             }
-
         }
     }
 
@@ -186,7 +177,7 @@ class StreamingcommunityProvider: MainAPI() {
         return true
     }
 
-    private suspend fun VideoElement.toSearchResponse() : MovieSearchResponse{
+    private suspend fun VideoElement.toSearchResponse(): MovieSearchResponse {
         val id = this.id
         val name = this.slug
         val img = this.images[0].url
@@ -195,9 +186,13 @@ class StreamingcommunityProvider: MainAPI() {
         val posterUrl = "https://$ip/images/$number/$img"
         val videoUrl = "$mainUrl/titles/$id-$name"
         //posterMap[videourl] = posterurl
-        val data = app.post("$mainUrl/api/titles/preview/$id", referer = mainUrl, headers = mapOf("user-agent" to userAgent)).text
+        val data = app.post(
+            "$mainUrl/api/titles/preview/$id",
+            referer = mainUrl,
+            headers = mapOf("user-agent" to userAgent)
+        ).text
         val datajs = parseJson<Moviedata>(data)
-        val type: TvType = if (datajs.type == "movie") {
+        val type = if (datajs.type == "movie") {
             TvType.Movie
         } else {
             TvType.TvSeries
@@ -254,25 +249,30 @@ data class Moviedata(
     @JsonProperty("votes") val votes: List<Vote>,
     @JsonProperty("runtime") val runtime: Long? = null
 )
+
 data class Genre(
     @JsonProperty("name") val name: String,
     @JsonProperty("pivot") val pivot: Pivot,
 )
+
 data class Pivot(
     @JsonProperty("titleID") val titleID: Long,
     @JsonProperty("genreID") val genreID: Long,
 )
+
 data class Vote(
     @JsonProperty("title_id") val title_id: Long,
     @JsonProperty("average") val average: String,
     @JsonProperty("count") val count: Long,
     @JsonProperty("type") val type: String,
 )
+
 data class VideoElement(
     @JsonProperty("id") val id: Long,
     @JsonProperty("slug") val slug: String,
     @JsonProperty("images") val images: List<Image>,
 )
+
 data class Image(
     @JsonProperty("imageable_id") val imageableID: Long,
     @JsonProperty("imageable_type") val imageableType: String,
@@ -311,6 +311,7 @@ data class Season(
     @JsonProperty("updated_at") val updatedAt: String? = "",
     @JsonProperty("episodes") val episodes: List<Episodejson>
 )
+
 data class Episodejson(
     @JsonProperty("id") val id: Long,
     @JsonProperty("number") val number: Long,
@@ -319,6 +320,7 @@ data class Episodejson(
     @JsonProperty("season_id") val seasonID: Long,
     @JsonProperty("images") val images: List<ImageSeason>
 )
+
 data class ImageSeason(
     @JsonProperty("imageable_id") val imageableID: Long,
     @JsonProperty("imageable_type") val imageableType: String,
@@ -328,6 +330,7 @@ data class ImageSeason(
     @JsonProperty("type") val type: String,
     @JsonProperty("original_url") val originalURL: String
 )
+
 data class TrailerElement(
     @JsonProperty("id") val id: Long? = null,
     @JsonProperty("url") val url: String? = null,

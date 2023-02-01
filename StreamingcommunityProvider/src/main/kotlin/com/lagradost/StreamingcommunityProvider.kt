@@ -1,4 +1,4 @@
-package com.lagradost.cloudstream3
+package com.lagradost
 
 import android.text.Html
 import com.fasterxml.jackson.annotation.*

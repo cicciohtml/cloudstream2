@@ -103,13 +103,13 @@ class StreamingcommunityProvider : MainAPI() {
                     val href = "$mainUrl/watch/$sid?e=${ep.id}"
                     val postImage = ep.images.firstOrNull()?.originalURL
 
-                    newEpisode(href) {
-                        this.name = ep.name
-                        this.season = season
-                        this.episode = ep.number.toInt()
-                        this.description = ep.plot
-                        this.posterUrl = postImage
-                    }
+                        newEpisode(href) {
+                            this.name = ep.name
+                            this.season = season
+                            this.episode = ep.number.toInt()
+                            this.description = ep.plot
+                            this.posterUrl = postImage
+                        }
                 }
             }.flatten()
 
@@ -180,10 +180,14 @@ class StreamingcommunityProvider : MainAPI() {
     private suspend fun VideoElement.toSearchResponse(): MovieSearchResponse {
         val id = this.id
         val name = this.slug
-        val img = this.images[0].url
-        val number = translateNumber(this.images[0].serverID.toInt())
-        val ip = translateIp(this.images[0].proxyID.toInt())
-        val posterUrl = "https://$ip/images/$number/$img"
+        val img = this.images.firstOrNull()
+        val posterUrl = if (img != null){
+            val number = translateNumber(this.images[0].serverID.toInt())
+            val ip = translateIp(this.images[0].proxyID.toInt())
+            "https://$ip/images/$number/${img.url}"
+        } else {
+            ""
+        }
         val videoUrl = "$mainUrl/titles/$id-$name"
         //posterMap[videourl] = posterurl
         val data = app.post(

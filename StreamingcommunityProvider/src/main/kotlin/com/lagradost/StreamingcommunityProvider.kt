@@ -103,13 +103,13 @@ class StreamingcommunityProvider : MainAPI() {
                     val href = "$mainUrl/watch/$sid?e=${ep.id}"
                     val postImage = ep.images.firstOrNull()?.originalURL
 
-                        newEpisode(href) {
-                            this.name = ep.name
-                            this.season = season
-                            this.episode = ep.number.toInt()
-                            this.description = ep.plot
-                            this.posterUrl = postImage
-                        }
+                    newEpisode(href) {
+                        this.name = ep.name
+                        this.season = season
+                        this.episode = ep.number.toInt()
+                        this.description = ep.plot
+                        this.posterUrl = postImage
+                    }
                 }
             }.flatten()
 

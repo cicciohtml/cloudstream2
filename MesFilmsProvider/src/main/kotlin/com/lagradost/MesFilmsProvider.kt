@@ -12,7 +12,6 @@ import org.jsoup.Jsoup
 
 
 class MesFilmsProvider : MainAPI() {
-    // VostFreeProvider() est ajouté à la liste allProviders dans MainAPI.kt
     override var mainUrl = "https://mesfilms.lol"
     override var name = "Mes Films"
     override val hasQuickSearch = false // recherche rapide (optionel, pas vraimet utile)
@@ -37,36 +36,37 @@ class MesFilmsProvider : MainAPI() {
                     ?.replace("\t", "")?.replace("\n", "")
 
                 type != "Épisode" // enlève tous les éléments qui sont des épisodes de série
-            }.apmap { div -> // apmap crée une liste des éléments (ici newMovieSearchResponse et newTvSeriesSearchResponse)
+            }.mapNotNull { div -> // apmap crée une liste des éléments (ici newMovieSearchResponse et newTvSeriesSearchResponse)
                 val posterContainer = div.selectFirst("> div.image > div.thumbnail > a") // selectione le premier élément correspondant à ces critères
                 val type = posterContainer?.selectFirst("> span")?.text()?.replace("\t", "")?.replace("\n", "")
                 // replace enlève tous les '\t' et '\n' du titre
                 val mediaPoster = posterContainer?.selectFirst("> img")?.attr("src") // récupère le texte de l'attribut src de l'élément
 
-                val href = posterContainer?.attr("href") ?: throw ErrorLoadingException("invalid link") // renvoie une erreur si il n'y a pas de lien vers le média
+                val href = posterContainer?.attr("href") ?: return@mapNotNull null // renvoie une erreur si il n'y a pas de lien vers le média
                 // val test1 = stringVariable ?: "valeur par défault"
                 // val test2 = stringVariable ?: doSomething()  // si stringVariable est null, on appelle la fonction doSomething
                 // '?:' est appelé Elvis Operator, si la variable stringVariable est null, alors on utilise la "valeur par défault"
                 // https://stackoverflow.com/questions/48253107/what-does-do-in-kotlin-elvis-operator
-                val details = div.select("> div.details > div.meta")
+                // val details = div.select("> div.details > div.meta")
                 //val rating = details.select("> span.rating").text()
-                val year = details.select("> span.year").text()
+                // val year = details.select("> span.year").text().toIntOrNull()
 
                 val title = div.selectFirst("> div.details > div.title > a")?.text().toString()
 
                 when (type) {
                     "Film" -> (
-                            newMovieSearchResponse( // réponse du film qui sera ajoutée à la liste apmap qui sera ensuite return
+                            newMovieSearchResponse( // réponse du film qui sera ajoutée à la liste map qui sera ensuite return
                                 title,
                                 href,
                                 TvType.Movie,
                                 false
                             ) {
                                 this.posterUrl = mediaPoster
+                                // this.year = year
                                 // this.rating = rating
                             }
                             )
-                    "TV" -> (
+                    /*"TV" -> (
                             newTvSeriesSearchResponse(
                                 title,
                                 href,
@@ -74,10 +74,11 @@ class MesFilmsProvider : MainAPI() {
                                 false
                             ) {
                                 this.posterUrl = mediaPoster
+
                                 // this.rating = rating
                             }
-
                             )
+                    */
                     else -> {
                         throw ErrorLoadingException("invalid media type") // le type n'est pas reconnu ==> affiche une erreur
                     }
@@ -114,7 +115,7 @@ class MesFilmsProvider : MainAPI() {
         val description = extra.select("span.tagline").first()?.text() // first() selectione le premier élément de la liste
 
         val rating = data.select("div.dt_rating_data > div.starstruck-rating > span.dt_rating_vgs").first()?.text()?.let {
-            if (it == "0.0" || it.isNullOrBlank()) {
+            if (it == "0.0" || it.isBlank()) {
                 null
             } else {
                 it
@@ -133,14 +134,26 @@ class MesFilmsProvider : MainAPI() {
             "TV"
         }
         // un api est disponible sur ce site pour récupérer le trailer (lien vers youtube)
-        val trailerUrl = if (postId != null){
-            val payloadRequest = mapOf("action" to "doo_player_ajax", "post" to postId, "nume" to "trailer", "type" to mediaType) // on crée les donées de la requetes ici
-            val getTrailer =
-                app.post("$mainUrl/wp-admin/admin-ajax.php", headers = mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"), data = payloadRequest).text
-            parseJson<EmbedUrlClass>(getTrailer).url
-            // parseJson lit le contenu de la réponse (la variable getTrailer) et cherche la valeur d'embed_url dans cette réponse
-        } else {
-            null
+        val trailerUrl = postId?.let{
+            try {
+                val payloadRequest = mapOf(
+                    "action" to "doo_player_ajax",
+                    "post" to postId,
+                    "nume" to "trailer",
+                    "type" to mediaType
+                ) // on crée les donées de la requetes ici
+                val getTrailer =
+                    app.post(
+                        "$mainUrl/wp-admin/admin-ajax.php",
+                        headers = mapOf("Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"),
+                        data = payloadRequest
+                    ).text
+                parseJson<EmbedUrlClass>(getTrailer).url
+                // parseJson lit le contenu de la réponse (la variable getTrailer) et cherche la valeur d'embed_url dans cette réponse
+
+            } catch (e: Exception){
+                null
+            }
         }
 
 
@@ -151,7 +164,7 @@ class MesFilmsProvider : MainAPI() {
                 this.year = date?.toIntOrNull()
                 this.tags = tags
                 this.plot = description
-                addTrailer(trailerUrl)
+                trailerUrl?.let{addTrailer(trailerUrl)}
             }
         } else  // a tv serie
         {
@@ -220,7 +233,7 @@ class MesFilmsProvider : MainAPI() {
             val poster = article.select("div.poster")
             val posterUrl = poster.select("> img").attr("data-src")
             val quality = getQualityFromString(poster.select("> div.mepo > span.quality").text())
-            val rating = poster.select("> div.rating").text()
+            // val rating = poster.select("> div.rating").text()
             //val link = poster.select("> a")?.attr("href")
 
             val data = article.select("div.data")
@@ -236,7 +249,7 @@ class MesFilmsProvider : MainAPI() {
                 this.quality = quality
             }
         }
-        if (returnList.isEmpty()) throw ErrorLoadingException()
+        if (returnList.isEmpty()) throw ErrorLoadingException("No movies found in the main page")
         return HomePageResponse(
             listOf(
                 HomePageList(categoryTitle, returnList)

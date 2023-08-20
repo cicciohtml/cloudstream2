@@ -11,7 +11,7 @@ import java.security.MessageDigest
 
 class StreamingcommunityProvider : MainAPI() {
     override var lang = "it"
-    override var mainUrl = "https://streamingcommunity.bike"
+    override var mainUrl = "https://streamingcommunity.bet"
     override var name = "StreamingCommunity"
     override val hasMainPage = true
     override val hasChromecastSupport = true

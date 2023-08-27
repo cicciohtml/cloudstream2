@@ -11,7 +11,7 @@ import java.security.MessageDigest
 
 class StreamingcommunityProvider : MainAPI() {
     override var lang = "it"
-    override var mainUrl = "https://streamingcommunity.bike"
+    override var mainUrl = "https://streamingcommunity.bet"
     override var name = "StreamingCommunity"
     override val hasMainPage = true
     override val hasChromecastSupport = true
@@ -20,7 +20,7 @@ class StreamingcommunityProvider : MainAPI() {
         TvType.TvSeries,
     )
     private val userAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val webpage = app.get(mainUrl, headers = mapOf("user-agent" to userAgent))

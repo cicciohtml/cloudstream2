@@ -12,7 +12,7 @@ import org.json.JSONObject
 class StreamingcommunityProvider : MainAPI() {
     override var mainUrl = "https://streamingcommunity.black"
     private var cdnUrl = "https://cdn.streamingcommunity.black" // Images
-    override var name = "StreamingCommunity-test"
+    override var name = "StreamingCommunity"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override val hasChromecastSupport = true
     override var lang = "it"

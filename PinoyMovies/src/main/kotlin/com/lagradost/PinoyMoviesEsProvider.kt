@@ -201,7 +201,7 @@ class PinoyMoviesEsProvider : MainAPI() {
                 Pair("type", "movie")
             )
             val innerPage = app.post(
-                "https://pinoymovies.es/wp-admin/admin-ajax.php ",
+                "https://pinoymovies.cx/wp-admin/admin-ajax.php ",
                 referer = url, data = content
             ).document.select("body")?.text()?.trim()
             if (!innerPage.isNullOrBlank()) {

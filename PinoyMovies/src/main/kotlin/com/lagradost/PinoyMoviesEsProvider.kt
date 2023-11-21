@@ -13,7 +13,7 @@ import org.jsoup.select.Elements
 
 class PinoyMoviesEsProvider : MainAPI() {
     override var name = "Pinoy Movies"
-    override var mainUrl = "https://pinoymovies.es"
+    override var mainUrl = "https://pinoymovies.cx"
     override var lang = "tl"
     override val supportedTypes = setOf(TvType.AsianDrama)
     override val hasDownloadSupport = false
@@ -201,7 +201,7 @@ class PinoyMoviesEsProvider : MainAPI() {
                 Pair("type", "movie")
             )
             val innerPage = app.post(
-                "https://pinoymovies.es/wp-admin/admin-ajax.php ",
+                "https://pinoymovies.cx/wp-admin/admin-ajax.php ",
                 referer = url, data = content
             ).document.select("body")?.text()?.trim()
             if (!innerPage.isNullOrBlank()) {
